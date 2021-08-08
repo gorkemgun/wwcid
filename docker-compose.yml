@@ -1,0 +1,41 @@
+---
+version: "2.1"
+services:
+  wireguard:
+    image: ghcr.io/linuxserver/wireguard
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Istanbul
+      - SERVERPORT=51820
+      - PEERS=1
+      - PEERDNS=1.1.1.1
+      - INTERNAL_SUBNET=10.13.13.0
+      - ALLOWEDIPS=0.0.0.0/0
+    volumes:
+      - ./config/wireguard:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+  cloak:
+    build: ./cloak-docker
+    ports:
+      - 443:443/tcp
+    volumes:
+      - ./config/cloak:/etc/cloak
+    depends_on:
+      - wireguard
+    environment:
+      - CK_PORT=443
+      - CK_WEB_ADDR=www.twitch.tv:443
+      - CK_PROXY_NAME=wireguard
+      - CK_PROXY_ADDR=wireguard:51820
+      - CK_PROXY_METHOD=udp
+      - CK_CRYPT=aes-128-gcm
